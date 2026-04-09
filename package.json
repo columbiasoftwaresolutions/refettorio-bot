@@ -1,0 +1,30 @@
+{
+  "name": "refettorio-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp meal-logging bot for Refettorio Harlem",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "setup": "node setup.js",
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/columbiasoftwaresolutions/refettorio-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/columbiasoftwaresolutions/refettorio-bot/issues"
+  },
+  "homepage": "https://github.com/columbiasoftwaresolutions/refettorio-bot#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.86.1",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "googleapis": "^171.4.0",
+    "readline-sync": "^1.4.10",
+    "twilio": "^5.13.1"
+  }
+}
