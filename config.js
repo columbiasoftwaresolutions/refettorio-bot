@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const required = [
   'TWILIO_ACCOUNT_SID',

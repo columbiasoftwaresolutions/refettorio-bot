@@ -94,7 +94,8 @@ function buildSummary(parsed) {
   const parts = [];
 
   const ms = parsed.meals_served || {};
-  const totalMeals = ms.total ?? ((ms.sitdown ?? 0) + (ms.takeaway ?? 0)) || null;
+  const derived = (ms.sitdown ?? 0) + (ms.takeaway ?? 0);
+  const totalMeals = ms.total ?? (derived > 0 ? derived : null);
   if (totalMeals) parts.push(`${totalMeals} meals served`);
 
   const fr = parsed.food_rescue || {};

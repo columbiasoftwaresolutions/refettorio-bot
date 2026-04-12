@@ -7,7 +7,7 @@
  * No real WhatsApp message needed.
  */
 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const { validate } = require('./config');
 const { parseMessage } = require('./parser');
 const { ensureAllTabs, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, TABS } = require('./sheets');
