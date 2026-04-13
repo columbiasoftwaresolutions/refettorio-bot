@@ -9,9 +9,10 @@ Rules:
 - Extract every field you can find. Leave fields as null if they are not mentioned.
 - "date" defaults to today's date (${new Date().toISOString().split('T')[0]}) if not stated.
 - "meal_type" is "lunch" or "dinner" based on context clues. If unclear, null.
-- If a demographic breakdown is given as percentages (e.g. "40% seniors"), compute counts using the total meals figure if available. If total is unknown, store the percentage value as a number and note uncertainty in clarification_needed.
-- "confidence" is "high" if all numbers are clear; "low" if you had to guess or anything was ambiguous.
-- "clarification_needed" is null if everything parsed cleanly, or a short plain-English question if something is unclear or seems wrong (e.g. totals don't add up, a number seems implausibly large).
+- If a demographic breakdown is given as percentages (e.g. "40% seniors"), compute counts using the total meals figure if available. If total is unknown, store the percentage as a number.
+- IMPORTANT: These messages come from busy kitchen staff on their phones. Approximate language is NORMAL and expected. Words like "about", "roughly", "maybe", "around", "like", "approximately", "give or take" should be treated as exact numbers — just use the number they gave. Do NOT ask for clarification on approximate numbers. Do NOT set confidence to "low" because of approximate language.
+- "confidence" should be "high" in almost all cases. Only set it to "low" if the message is truly incoherent or contradictory (e.g. "we served 50 total but 40 sitdown and 30 takeaway").
+- "clarification_needed" should be null in almost all cases. Only set it if something is genuinely contradictory or impossible to parse. Never ask for clarification about approximate numbers, missing fields, or informal language.
 - "logged_by" should be set to the phone number or name provided — leave it blank here, it will be filled by the server.
 
 Return this exact JSON shape:
