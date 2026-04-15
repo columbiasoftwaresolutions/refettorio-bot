@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Refettorio Guest Check-In</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #ffffff;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: #16213e;
+      border-bottom: 2px solid #0f3460;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e94560;
+    }
+
+    .guest-count {
+      font-size: 18px;
+      color: #a0a0b8;
+      font-weight: 500;
+    }
+
+    .guest-count span {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    /* Offline banner */
+    .offline-banner {
+      display: none;
+      background: #e94560;
+      color: #fff;
+      text-align: center;
+      padding: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .offline-banner.show {
+      display: block;
+    }
+
+    /* Main content area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* Step container */
+    .step {
+      display: none;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .step.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .step-label {
+      font-size: 26px;
+      font-weight: 600;
+      color: #e0e0f0;
+      margin-bottom: 4px;
+    }
+
+    .step-hint {
+      font-size: 18px;
+      color: #8888a8;
+      margin-bottom: 8px;
+    }
+
+    /* Text input (name) */
+    .text-input {
+      width: 100%;
+      font-size: 28px;
+      padding: 16px 20px;
+      border: 3px solid #0f3460;
+      border-radius: 12px;
+      background: #16213e;
+      color: #ffffff;
+      text-align: center;
+      outline: none;
+    }
+
+    .text-input:focus {
+      border-color: #e94560;
+    }
+
+    .text-input::placeholder {
+      color: #555570;
+    }
+
+    /* Number input for other zip */
+    .zip-input {
+      width: 200px;
+      font-size: 28px;
+      padding: 14px 20px;
+      border: 3px solid #0f3460;
+      border-radius: 12px;
+      background: #16213e;
+      color: #ffffff;
+      text-align: center;
+      outline: none;
+    }
+
+    .zip-input:focus {
+      border-color: #e94560;
+    }
+
+    /* Button grid */
+    .btn-grid {
+      display: grid;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .btn-grid.cols-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .btn-grid.cols-3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    /* Buttons */
+    .btn {
+      min-height: 64px;
+      font-size: 22px;
+      font-weight: 600;
+      border: 3px solid #0f3460;
+      border-radius: 12px;
+      background: #16213e;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      user-select: none;
+    }
+
+    .btn:active {
+      background: #0f3460;
+      border-color: #e94560;
+    }
+
+    .btn-primary {
+      background: #e94560;
+      border-color: #e94560;
+    }
+
+    .btn-primary:active {
+      background: #c73650;
+    }
+
+    .btn-skip {
+      background: transparent;
+      border-color: #333355;
+      color: #8888a8;
+      font-size: 18px;
+      min-height: 52px;
+    }
+
+    .btn-skip:active {
+      background: #16213e;
+    }
+
+    /* Success flash */
+    .flash {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(46, 204, 113, 0.15);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .flash.show {
+      display: block;
+      animation: flashAnim 0.4s ease-out forwards;
+    }
+
+    @keyframes flashAnim {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Progress dots */
+    .progress {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333355;
+    }
+
+    .dot.done {
+      background: #e94560;
+    }
+
+    .dot.current {
+      background: #ffffff;
+    }
+
+    /* Queue indicator */
+    .queue-count {
+      display: none;
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      background: #e94560;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .queue-count.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Refettorio Harlem</h1>
+    <div class="guest-count">Today: <span id="guestCount">0</span> guests</div>
+  </div>
+
+  <div class="offline-banner" id="offlineBanner">Offline — submissions will sync when wifi returns</div>
+
+  <div class="flash" id="flash"></div>
+
+  <div class="main">
+
+    <!-- Step 1: Name -->
+    <div class="step active" id="step-name">
+      <div class="progress">
+        <div class="dot current"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="step-label">Guest Name</div>
+      <div class="step-hint">First name only, or skip</div>
+      <input type="text" class="text-input" id="nameInput" placeholder="Type name..." autocomplete="off" autocorrect="off" autocapitalize="words">
+      <div class="btn-grid cols-2">
+        <button class="btn btn-primary" id="nameNext">Next</button>
+        <button class="btn btn-skip" id="nameSkip">Skip</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Zip Code -->
+    <div class="step" id="step-zip">
+      <div class="progress">
+        <div class="dot done"></div>
+        <div class="dot current"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="step-label">Zip Code</div>
+      <div class="step-hint">Select area</div>
+      <div class="btn-grid cols-3">
+        <button class="btn" data-zip="10027">10027</button>
+        <button class="btn" data-zip="10030">10030</button>
+        <button class="btn" data-zip="10031">10031</button>
+        <button class="btn" data-zip="10037">10037</button>
+        <button class="btn" data-zip="10039">10039</button>
+        <button class="btn btn-skip" data-zip="other">Other</button>
+      </div>
+      <div id="otherZipRow" style="display:none; margin-top: 12px; display: none; flex-direction: row; gap: 10px; align-items: center; justify-content: center;">
+        <input type="number" class="zip-input" id="otherZipInput" placeholder="Zip" maxlength="5" inputmode="numeric">
+        <button class="btn btn-primary" id="otherZipOk" style="min-height: 52px; padding: 12px 24px;">OK</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Visit Type -->
+    <div class="step" id="step-visit">
+      <div class="progress">
+        <div class="dot done"></div>
+        <div class="dot done"></div>
+        <div class="dot current"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="step-label">Visit Type</div>
+      <div class="step-hint">Dining in or taking away?</div>
+      <div class="btn-grid cols-2">
+        <button class="btn" data-visit="Dining In" style="min-height: 80px; font-size: 24px;">Dining In</button>
+        <button class="btn" data-visit="Taking Away" style="min-height: 80px; font-size: 24px;">Taking Away</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Age Range -->
+    <div class="step" id="step-age">
+      <div class="progress">
+        <div class="dot done"></div>
+        <div class="dot done"></div>
+        <div class="dot done"></div>
+        <div class="dot current"></div>
+      </div>
+      <div class="step-label">Age Range</div>
+      <div class="step-hint">Approximate age group</div>
+      <div class="btn-grid cols-3">
+        <button class="btn" data-age="Under 18" style="min-height: 80px; font-size: 22px;">Under 18</button>
+        <button class="btn" data-age="18-59" style="min-height: 80px; font-size: 22px;">18 – 59</button>
+        <button class="btn" data-age="60+" style="min-height: 80px; font-size: 22px;">60+</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="queue-count" id="queueCount"></div>
+
+  <script>
+    // ─── State ────────────────────────────────────────────────────
+    const QUEUE_KEY = 'refettorio_checkin_queue';
+    const COUNT_KEY = 'refettorio_guest_count';
+    const COUNT_DATE_KEY = 'refettorio_guest_count_date';
+
+    let currentStep = 0;
+    let guestData = { name: '', zipCode: '', visitType: '', ageRange: '' };
+    let localCount = loadLocalCount();
+
+    const steps = ['step-name', 'step-zip', 'step-visit', 'step-age'];
+
+    // ─── Init ─────────────────────────────────────────────────────
+    updateCountDisplay();
+    fetchServerCount();
+    processQueue();
+
+    // Check online/offline
+    window.addEventListener('online', () => {
+      document.getElementById('offlineBanner').classList.remove('show');
+      processQueue();
+    });
+    window.addEventListener('offline', () => {
+      document.getElementById('offlineBanner').classList.add('show');
+    });
+    if (!navigator.onLine) {
+      document.getElementById('offlineBanner').classList.add('show');
+    }
+
+    // ─── Step 1: Name ─────────────────────────────────────────────
+    const nameInput = document.getElementById('nameInput');
+
+    document.getElementById('nameNext').addEventListener('click', () => {
+      guestData.name = nameInput.value.trim();
+      goToStep(1);
+    });
+
+    document.getElementById('nameSkip').addEventListener('click', () => {
+      guestData.name = '';
+      goToStep(1);
+    });
+
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        guestData.name = nameInput.value.trim();
+        goToStep(1);
+      }
+    });
+
+    // ─── Step 2: Zip Code ─────────────────────────────────────────
+    document.querySelectorAll('[data-zip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const zip = btn.getAttribute('data-zip');
+        if (zip === 'other') {
+          const row = document.getElementById('otherZipRow');
+          row.style.display = 'flex';
+          document.getElementById('otherZipInput').focus();
+          return;
+        }
+        guestData.zipCode = zip;
+        goToStep(2);
+      });
+    });
+
+    document.getElementById('otherZipOk').addEventListener('click', () => {
+      const val = document.getElementById('otherZipInput').value.trim();
+      if (val.length >= 3) {
+        guestData.zipCode = val;
+        goToStep(2);
+      }
+    });
+
+    document.getElementById('otherZipInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('otherZipOk').click();
+      }
+    });
+
+    // ─── Step 3: Visit Type ───────────────────────────────────────
+    document.querySelectorAll('[data-visit]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        guestData.visitType = btn.getAttribute('data-visit');
+        goToStep(3);
+      });
+    });
+
+    // ─── Step 4: Age Range (auto-submit) ──────────────────────────
+    document.querySelectorAll('[data-age]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        guestData.ageRange = btn.getAttribute('data-age');
+        submitGuest();
+      });
+    });
+
+    // ─── Navigation ───────────────────────────────────────────────
+    function goToStep(index) {
+      steps.forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.classList.toggle('active', i === index);
+      });
+      currentStep = index;
+
+      // Focus the name input when returning to step 0
+      if (index === 0) {
+        setTimeout(() => nameInput.focus(), 100);
+      }
+    }
+
+    // ─── Submit ───────────────────────────────────────────────────
+    function submitGuest() {
+      const entry = {
+        name: guestData.name,
+        zipCode: guestData.zipCode,
+        visitType: guestData.visitType,
+        ageRange: guestData.ageRange,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Increment local count
+      localCount++;
+      saveLocalCount();
+      updateCountDisplay();
+
+      // Flash green
+      const flash = document.getElementById('flash');
+      flash.classList.remove('show');
+      void flash.offsetWidth; // trigger reflow
+      flash.classList.add('show');
+
+      // Queue the submission
+      addToQueue(entry);
+      processQueue();
+
+      // Reset for next guest
+      guestData = { name: '', zipCode: '', visitType: '', ageRange: '' };
+      nameInput.value = '';
+      document.getElementById('otherZipRow').style.display = 'none';
+      document.getElementById('otherZipInput').value = '';
+      goToStep(0);
+    }
+
+    // ─── Offline Queue ────────────────────────────────────────────
+    function getQueue() {
+      try {
+        return JSON.parse(localStorage.getItem(QUEUE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveQueue(queue) {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      updateQueueDisplay();
+    }
+
+    function addToQueue(entry) {
+      const queue = getQueue();
+      queue.push(entry);
+      saveQueue(queue);
+    }
+
+    function updateQueueDisplay() {
+      const queue = getQueue();
+      const el = document.getElementById('queueCount');
+      if (queue.length > 0) {
+        el.textContent = queue.length + ' queued';
+        el.classList.add('show');
+      } else {
+        el.classList.remove('show');
+      }
+    }
+
+    async function processQueue() {
+      if (!navigator.onLine) return;
+
+      const queue = getQueue();
+      if (queue.length === 0) return;
+
+      const remaining = [];
+
+      for (const entry of queue) {
+        try {
+          const res = await fetch('/api/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry),
+          });
+          if (!res.ok) {
+            remaining.push(entry);
+          }
+        } catch {
+          remaining.push(entry);
+        }
+      }
+
+      saveQueue(remaining);
+    }
+
+    // Retry queue every 30 seconds
+    setInterval(processQueue, 30000);
+
+    // ─── Guest Count ──────────────────────────────────────────────
+    function todayStr() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function loadLocalCount() {
+      const savedDate = localStorage.getItem(COUNT_DATE_KEY);
+      if (savedDate === todayStr()) {
+        return parseInt(localStorage.getItem(COUNT_KEY) || '0', 10);
+      }
+      // New day — reset
+      localStorage.setItem(COUNT_KEY, '0');
+      localStorage.setItem(COUNT_DATE_KEY, todayStr());
+      return 0;
+    }
+
+    function saveLocalCount() {
+      localStorage.setItem(COUNT_KEY, String(localCount));
+      localStorage.setItem(COUNT_DATE_KEY, todayStr());
+    }
+
+    function updateCountDisplay() {
+      document.getElementById('guestCount').textContent = localCount;
+    }
+
+    async function fetchServerCount() {
+      try {
+        const res = await fetch('/api/checkin/count');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.count > localCount) {
+            localCount = data.count;
+            saveLocalCount();
+            updateCountDisplay();
+          }
+        }
+      } catch {
+        // Use local count as fallback
+      }
+    }
+  </script>
+</body>
+</html>

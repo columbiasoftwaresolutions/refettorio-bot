@@ -6,6 +6,7 @@ const TABS = {
   FOOD_RESCUE: 'Food Rescue',
   MONTHLY_SUMMARY: 'Monthly Summary',
   RAW_LOG: 'Raw Log',
+  GUEST_LOG: 'Guest Log',
 };
 
 // Headers for each tab
@@ -26,6 +27,9 @@ const HEADERS = {
   ],
   [TABS.RAW_LOG]: [
     'Timestamp', 'Phone Number', 'Raw Message', 'Parsed Successfully (Y/N)', 'Notes',
+  ],
+  [TABS.GUEST_LOG]: [
+    'Timestamp', 'Name', 'Zip Code', 'Visit Type', 'Age Range',
   ],
 };
 
@@ -224,4 +228,37 @@ async function logRaw(serviceAccount, spreadsheetId, { phoneNumber, rawMessage, 
   await appendRawLog(sheetsClient, spreadsheetId, { phoneNumber, rawMessage, parsedOk, notes });
 }
 
-module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, TABS };
+// Append a guest check-in row
+async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, timestamp }) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const ts = timestamp || new Date().toISOString();
+  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || ''];
+
+  await sheetsClient.spreadsheets.values.append({
+    spreadsheetId,
+    range: `'${TABS.GUEST_LOG}'!A:E`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [row] },
+  });
+}
+
+// Get today's guest count from the Guest Log tab
+async function getGuestCountToday(serviceAccount, spreadsheetId) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const response = await sheetsClient.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${TABS.GUEST_LOG}'!A:A`,
+    });
+    const rows = response.data.values || [];
+    // Count rows where timestamp starts with today's date (skip header)
+    return rows.slice(1).filter((r) => r[0] && r[0].startsWith(today)).length;
+  } catch {
+    return 0;
+  }
+}
+
+module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, appendGuestLog, getGuestCountToday, TABS };

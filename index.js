@@ -1,7 +1,8 @@
+const path = require('path');
 const express = require('express');
 const { validate } = require('./config');
 const { parseMessage } = require('./parser');
-const { ensureAllTabs, logService, logRaw } = require('./sheets');
+const { ensureAllTabs, logService, logRaw, appendGuestLog, getGuestCountToday } = require('./sheets');
 
 const config = validate();
 const app = express();
@@ -20,6 +21,43 @@ app.use(express.json());
 // Health check
 app.get('/', (req, res) => {
   res.send('Refettorio bot is running.');
+});
+
+// ─── Guest Check-In (Phase 2) ──────────────────────────────────────────────
+
+// Serve the check-in page
+app.get('/checkin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'checkin.html'));
+});
+
+// API: submit a guest check-in
+app.post('/api/checkin', async (req, res) => {
+  const { name, zipCode, visitType, ageRange, timestamp } = req.body;
+
+  try {
+    await appendGuestLog(config.sheets.serviceAccount, config.sheets.id, {
+      name: name || '',
+      zipCode: zipCode || '',
+      visitType: visitType || '',
+      ageRange: ageRange || '',
+      timestamp: timestamp || new Date().toISOString(),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Guest check-in error:', err);
+    res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
+  }
+});
+
+// API: get today's guest count
+app.get('/api/checkin/count', async (req, res) => {
+  try {
+    const count = await getGuestCountToday(config.sheets.serviceAccount, config.sheets.id);
+    res.json({ count });
+  } catch (err) {
+    console.error('Guest count error:', err);
+    res.status(500).json({ count: 0 });
+  }
 });
 
 // Twilio webhook
@@ -131,22 +169,29 @@ function buildSummary(parsed) {
   const parts = [];
 
   const ms = parsed.meals_served || {};
+  if (ms.sitdown) parts.push(`${ms.sitdown} sit-down`);
+  if (ms.takeaway) parts.push(`${ms.takeaway} takeaway`);
   const derived = (ms.sitdown ?? 0) + (ms.takeaway ?? 0);
   const totalMeals = ms.total ?? (derived > 0 ? derived : null);
-  if (totalMeals) parts.push(`${totalMeals} meals served`);
+  if (totalMeals) parts.push(`${totalMeals} total meals`);
+  if (ms.adults) parts.push(`${ms.adults} adults`);
+  if (ms.children) parts.push(`${ms.children} children`);
+  if (ms.seniors) parts.push(`${ms.seniors} seniors`);
 
   const fr = parsed.food_rescue || {};
-  if (fr.baldor_lbs) parts.push(`${fr.baldor_lbs} lbs Baldor rescue`);
+  if (fr.baldor_lbs) parts.push(`Baldor ${fr.baldor_lbs} lbs`);
   for (const src of fr.other_sources || []) {
-    if (src.lbs) parts.push(`${src.lbs} lbs from ${src.name}`);
+    if (src.lbs) parts.push(`${src.name} ${src.lbs} lbs`);
   }
 
   const p = parsed.pantry || {};
   if (p.pantry_guests) parts.push(`${p.pantry_guests} pantry guests`);
-  if (p.bags_distributed) parts.push(`${p.bags_distributed} pantry bags`);
+  if (p.bags_distributed) parts.push(`${p.bags_distributed} bags`);
+  if (p.avg_bag_weight_lbs) parts.push(`avg ${p.avg_bag_weight_lbs} lbs/bag`);
 
   const k = parsed.kitchen || {};
   if (k.meal_requests) parts.push(`${k.meal_requests} meal requests`);
+  if (k.avg_plate_weight_lbs) parts.push(`avg plate ${k.avg_plate_weight_lbs} lbs`);
 
   if (fr.ingredient_budget_usd) parts.push(`$${fr.ingredient_budget_usd} budget`);
 
