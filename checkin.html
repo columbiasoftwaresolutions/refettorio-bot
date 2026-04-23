@@ -52,6 +52,33 @@
       font-weight: 700;
     }
 
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      margin: 8px 12px 0;
+      background: #f0f0f0;
+      border-radius: 10px;
+      padding: 3px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #999;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .mode-btn.active {
+      background: #4CAF82;
+      color: #ffffff;
+    }
+
     /* Offline banner */
     .offline-banner {
       display: none;
@@ -67,14 +94,21 @@
       display: block;
     }
 
-    /* Main content — use all available space */
+    /* Main content */
     .main {
       flex: 1;
       display: grid;
-      grid-template-rows: auto 1fr 1fr 1fr;
       padding: 8px 12px;
       gap: 8px;
       overflow: hidden;
+    }
+
+    .main.restaurant-layout {
+      grid-template-rows: auto 1fr 1fr 1fr;
+    }
+
+    .main.pantry-layout {
+      grid-template-rows: auto auto 1fr 1fr;
     }
 
     /* Section cards */
@@ -86,6 +120,10 @@
       flex-direction: column;
     }
 
+    .section.hidden {
+      display: none;
+    }
+
     .section-label {
       font-size: 13px;
       font-weight: 600;
@@ -95,7 +133,7 @@
       margin-bottom: 6px;
     }
 
-    /* Text input — compact */
+    /* Text input */
     .text-input {
       width: 100%;
       font-size: 20px;
@@ -156,7 +194,7 @@
       cursor: pointer;
     }
 
-    /* Button grids — fill available space */
+    /* Button grids */
     .btn-grid {
       display: grid;
       gap: 6px;
@@ -171,13 +209,12 @@
       grid-template-columns: 1fr 1fr 1fr;
     }
 
-    /* Zip: 3 columns, 2 rows */
     .btn-grid.zip-grid {
       grid-template-columns: 1fr 1fr 1fr;
       grid-template-rows: 1fr 1fr;
     }
 
-    /* Selection buttons — fill their grid cell */
+    /* Selection buttons */
     .btn {
       font-size: 22px;
       font-weight: 600;
@@ -208,6 +245,82 @@
     .btn-other {
       font-size: 18px;
       color: #999;
+    }
+
+    /* Inline counter (inside Taking Away button) */
+    .inline-counter {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 8px;
+    }
+
+    .inline-counter.hidden {
+      display: none;
+    }
+
+    .inline-counter-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      font-size: 22px;
+      font-weight: 700;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      color: #fff;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .inline-counter-btn:active {
+      background: rgba(255,255,255,0.5);
+    }
+
+    .inline-counter-val {
+      font-size: 26px;
+      font-weight: 700;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* Counter (bags) */
+    .counter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .counter-btn {
+      width: 64px;
+      height: 64px;
+      font-size: 32px;
+      font-weight: 700;
+      border: 2px solid #e0e0e0;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #2d2d2d;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background 0.12s;
+    }
+
+    .counter-btn:active {
+      background: #e8f5e9;
+    }
+
+    .counter-value {
+      font-size: 48px;
+      font-weight: 700;
+      color: #2d2d2d;
+      min-width: 80px;
+      text-align: center;
     }
 
     /* Check In button */
@@ -288,16 +401,32 @@
 
   <div class="flash" id="flash"></div>
 
-  <div class="main">
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeRestaurant">Restaurant</button>
+    <button class="mode-btn" id="modePantry">Pantry</button>
+  </div>
 
-    <!-- Name — compact, top row -->
-    <div class="section">
+  <div class="main restaurant-layout" id="mainContent">
+
+    <!-- Name -->
+    <div class="section" id="sectionName">
       <div class="section-label">Name (optional)</div>
       <input type="text" class="text-input" id="nameInput" placeholder="First name or skip" autocomplete="off" autocorrect="off" autocapitalize="words">
     </div>
 
-    <!-- Zip Code — 3x2 grid of big buttons -->
-    <div class="section">
+    <!-- Bags counter (pantry — hidden by default) -->
+    <div class="section hidden" id="sectionBags">
+      <div class="section-label">Number of Bags</div>
+      <div class="counter">
+        <button class="counter-btn" id="bagsMinus">&minus;</button>
+        <div class="counter-value" id="bagsValue">1</div>
+        <button class="counter-btn" id="bagsPlus">+</button>
+      </div>
+    </div>
+
+    <!-- Zip Code -->
+    <div class="section" id="sectionZip">
       <div class="section-label">Zip Code</div>
       <div class="btn-grid zip-grid">
         <button class="btn" data-zip="10027">10027</button>
@@ -313,17 +442,24 @@
       </div>
     </div>
 
-    <!-- Visit Type — 2 big buttons, fill height -->
-    <div class="section">
+    <!-- Visit Type (restaurant only) -->
+    <div class="section" id="sectionVisit">
       <div class="section-label">Visit Type</div>
       <div class="btn-grid cols-2">
         <button class="btn" data-visit="Dining In">Dining In</button>
-        <button class="btn" data-visit="Taking Away">Taking Away</button>
+        <button class="btn" data-visit="Taking Away" id="takeawayBtn">
+          <span id="takeawayLabel">Taking Away</span>
+          <span id="takeawayCounter" class="inline-counter hidden">
+            <span class="inline-counter-btn" id="mealsMinus">&minus;</span>
+            <span class="inline-counter-val" id="mealsValue">1</span>
+            <span class="inline-counter-btn" id="mealsPlus">+</span>
+          </span>
+        </button>
       </div>
     </div>
 
-    <!-- Age Range — 3 big buttons, fill height -->
-    <div class="section">
+    <!-- Age Range -->
+    <div class="section" id="sectionAge">
       <div class="section-label">Age Range</div>
       <div class="btn-grid cols-3">
         <button class="btn" data-age="Under 18">Under 18</button>
@@ -345,22 +481,29 @@
     const QUEUE_KEY = 'refettorio_checkin_queue';
     const COUNT_KEY = 'refettorio_guest_count';
     const COUNT_DATE_KEY = 'refettorio_guest_count_date';
+    const MODE_KEY = 'refettorio_checkin_mode';
 
-    let guestData = { name: '', zipCode: '', visitType: '', ageRange: '' };
+    let mode = localStorage.getItem(MODE_KEY) || 'restaurant';
+    let guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, bags: 1 };
     let localCount = loadLocalCount();
 
     const submitBtn = document.getElementById('submitBtn');
     const nameInput = document.getElementById('nameInput');
+    const mainContent = document.getElementById('mainContent');
 
     // ─── Init ─────────────────────────────────────────────────────
+    applyMode(mode);
     updateCountDisplay();
     fetchServerCount();
     processQueue();
 
-    // Check online/offline
+    // Online/offline
     window.addEventListener('online', () => {
       document.getElementById('offlineBanner').classList.remove('show');
-      processQueue();
+      // Delay to let connection stabilize, then retry a few times
+      setTimeout(processQueue, 1000);
+      setTimeout(processQueue, 5000);
+      setTimeout(processQueue, 15000);
     });
     window.addEventListener('offline', () => {
       document.getElementById('offlineBanner').classList.add('show');
@@ -368,6 +511,62 @@
     if (!navigator.onLine) {
       document.getElementById('offlineBanner').classList.add('show');
     }
+
+    // ─── Mode Toggle ──────────────────────────────────────────────
+    document.getElementById('modeRestaurant').addEventListener('click', () => applyMode('restaurant'));
+    document.getElementById('modePantry').addEventListener('click', () => applyMode('pantry'));
+
+    function applyMode(newMode) {
+      mode = newMode;
+      localStorage.setItem(MODE_KEY, mode);
+
+      document.getElementById('modeRestaurant').classList.toggle('active', mode === 'restaurant');
+      document.getElementById('modePantry').classList.toggle('active', mode === 'pantry');
+
+      // Show/hide sections
+      document.getElementById('sectionVisit').classList.toggle('hidden', mode !== 'restaurant');
+      document.getElementById('sectionBags').classList.toggle('hidden', mode !== 'pantry');
+      // Reset inline takeaway counter
+      document.getElementById('takeawayCounter').classList.add('hidden');
+      document.getElementById('takeawayLabel').textContent = 'Taking Away';
+
+      // Update grid layout
+      if (mode === 'restaurant') {
+        mainContent.className = 'main restaurant-layout';
+      } else {
+        mainContent.className = 'main pantry-layout';
+      }
+
+      resetForm();
+    }
+
+    // ─── Inline Meals Counter (inside Taking Away button) ─────────
+    document.getElementById('mealsPlus').addEventListener('click', (e) => {
+      e.stopPropagation();
+      guestData.meals++;
+      document.getElementById('mealsValue').textContent = guestData.meals;
+    });
+
+    document.getElementById('mealsMinus').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (guestData.meals > 1) {
+        guestData.meals--;
+        document.getElementById('mealsValue').textContent = guestData.meals;
+      }
+    });
+
+    // ─── Bags Counter ─────────────────────────────────────────────
+    document.getElementById('bagsPlus').addEventListener('click', () => {
+      guestData.bags++;
+      document.getElementById('bagsValue').textContent = guestData.bags;
+    });
+
+    document.getElementById('bagsMinus').addEventListener('click', () => {
+      if (guestData.bags > 1) {
+        guestData.bags--;
+        document.getElementById('bagsValue').textContent = guestData.bags;
+      }
+    });
 
     // ─── Zip Code buttons ─────────────────────────────────────────
     document.querySelectorAll('[data-zip]').forEach((btn) => {
@@ -415,6 +614,14 @@
           selectInGroup('[data-visit]', btn);
           guestData.visitType = btn.getAttribute('data-visit');
         }
+        // Show inline meals counter only when Taking Away is selected
+        const showMeals = guestData.visitType === 'Taking Away';
+        document.getElementById('takeawayCounter').classList.toggle('hidden', !showMeals);
+        document.getElementById('takeawayLabel').textContent = showMeals ? 'Meals:' : 'Taking Away';
+        if (!showMeals) {
+          guestData.meals = 1;
+          document.getElementById('mealsValue').textContent = '1';
+        }
         updateSubmitState();
       });
     });
@@ -440,14 +647,20 @@
       guestData.name = nameInput.value.trim();
 
       const entry = {
+        mode: mode,
         name: guestData.name,
         zipCode: guestData.zipCode,
-        visitType: guestData.visitType,
         ageRange: guestData.ageRange,
         timestamp: new Date().toISOString(),
       };
 
-      // Increment local count
+      if (mode === 'restaurant') {
+        entry.visitType = guestData.visitType;
+        entry.meals = guestData.meals;
+      } else {
+        entry.bags = guestData.bags;
+      }
+
       localCount++;
       saveLocalCount();
       updateCountDisplay();
@@ -458,11 +671,8 @@
       void flash.offsetWidth;
       flash.classList.add('show');
 
-      // Queue the submission
       addToQueue(entry);
       processQueue();
-
-      // Reset
       resetForm();
     });
 
@@ -473,7 +683,9 @@
     }
 
     function isReady() {
-      return guestData.zipCode && guestData.visitType && guestData.ageRange;
+      if (!guestData.zipCode || !guestData.ageRange) return false;
+      if (mode === 'restaurant' && !guestData.visitType) return false;
+      return true;
     }
 
     function updateSubmitState() {
@@ -487,11 +699,15 @@
     }
 
     function resetForm() {
-      guestData = { name: '', zipCode: '', visitType: '', ageRange: '' };
+      guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, bags: 1 };
       nameInput.value = '';
       document.querySelectorAll('.btn.selected').forEach((b) => b.classList.remove('selected'));
       document.getElementById('otherZipRow').classList.remove('show');
       document.getElementById('otherZipInput').value = '';
+      document.getElementById('mealsValue').textContent = '1';
+      document.getElementById('takeawayCounter').classList.add('hidden');
+      document.getElementById('takeawayLabel').textContent = 'Taking Away';
+      document.getElementById('bagsValue').textContent = '1';
       updateSubmitState();
       nameInput.focus();
     }
@@ -527,34 +743,40 @@
       }
     }
 
+    let processing = false;
+
     async function processQueue() {
-      if (!navigator.onLine) return;
+      if (!navigator.onLine || processing) return;
+      processing = true;
 
-      const queue = getQueue();
-      if (queue.length === 0) return;
+      try {
+        let queue = getQueue();
 
-      const remaining = [];
-
-      for (const entry of queue) {
-        try {
-          const res = await fetch('/api/checkin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(entry),
-          });
-          if (!res.ok) {
-            remaining.push(entry);
+        while (queue.length > 0) {
+          const entry = queue[0];
+          try {
+            const endpoint = entry.mode === 'pantry' ? '/api/checkin/pantry' : '/api/checkin';
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(entry),
+            });
+            if (res.ok) {
+              queue.shift(); // remove the successful one
+              saveQueue(queue);
+            } else {
+              break; // server error, retry later
+            }
+          } catch {
+            break; // network error, retry later
           }
-        } catch {
-          remaining.push(entry);
         }
+      } finally {
+        processing = false;
       }
-
-      saveQueue(remaining);
     }
 
-    // Retry queue every 30 seconds
-    setInterval(processQueue, 30000);
+    setInterval(processQueue, 10000);
 
     // ─── Guest Count ──────────────────────────────────────────────
     function todayStr() {
@@ -591,9 +813,7 @@
             updateCountDisplay();
           }
         }
-      } catch {
-        // Use local count as fallback
-      }
+      } catch {}
     }
   </script>
 </body>

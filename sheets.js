@@ -7,6 +7,7 @@ const TABS = {
   MONTHLY_SUMMARY: 'Monthly Summary',
   RAW_LOG: 'Raw Log',
   GUEST_LOG: 'Guest Log',
+  PANTRY_GUEST_LOG: 'Pantry Guest Log',
 };
 
 // Headers for each tab
@@ -29,7 +30,10 @@ const HEADERS = {
     'Timestamp', 'Phone Number', 'Raw Message', 'Parsed Successfully (Y/N)', 'Notes',
   ],
   [TABS.GUEST_LOG]: [
-    'Timestamp', 'Name', 'Zip Code', 'Visit Type', 'Age Range',
+    'Timestamp', 'Name', 'Zip Code', 'Visit Type', 'Age Range', 'Meals',
+  ],
+  [TABS.PANTRY_GUEST_LOG]: [
+    'Timestamp', 'Name', 'Zip Code', 'Age Range', 'Bags',
   ],
 };
 
@@ -45,6 +49,20 @@ function monthlySummaryFormulas(sheetsId) {
       "=SUMPRODUCT((TEXT(DATEVALUE('Daily Log'!A2:A1000),\"YYYY-MM\")=TEXT(DATE(YEAR(TODAY()),ROW()-1,1),\"YYYY-MM\"))*IF(ISNUMBER('Daily Log'!K2:K1000),'Daily Log'!K2:K1000,0))",
     ],
   ];
+}
+
+// Format a date/ISO string to readable "4/23/2026 2:30 PM" (Eastern Time)
+function formatTimestamp(isoOrDate) {
+  const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
+  return d.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 function getAuth(serviceAccount) {
@@ -228,15 +246,30 @@ async function logRaw(serviceAccount, spreadsheetId, { phoneNumber, rawMessage, 
   await appendRawLog(sheetsClient, spreadsheetId, { phoneNumber, rawMessage, parsedOk, notes });
 }
 
-// Append a guest check-in row
-async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, timestamp }) {
+// Append a restaurant guest check-in row
+async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, meals, timestamp }) {
   const sheetsClient = await getSheetsClient(serviceAccount);
-  const ts = timestamp || new Date().toISOString();
-  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || ''];
+  const ts = formatTimestamp(timestamp || new Date());
+  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || '', meals ?? 1];
 
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId,
-    range: `'${TABS.GUEST_LOG}'!A:E`,
+    range: `'${TABS.GUEST_LOG}'!A:F`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [row] },
+  });
+}
+
+// Append a pantry guest check-in row
+async function appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, bags, timestamp }) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const ts = formatTimestamp(timestamp || new Date());
+  const row = [ts, name || '', zipCode || '', ageRange || '', bags ?? 1];
+
+  await sheetsClient.spreadsheets.values.append({
+    spreadsheetId,
+    range: `'${TABS.PANTRY_GUEST_LOG}'!A:E`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
@@ -246,7 +279,9 @@ async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, vi
 // Get today's guest count from the Guest Log tab
 async function getGuestCountToday(serviceAccount, spreadsheetId) {
   const sheetsClient = await getSheetsClient(serviceAccount);
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  // Match today's date in "M/D/YYYY" format (Eastern Time)
+  const todayStr = now.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
 
   try {
     const response = await sheetsClient.spreadsheets.values.get({
@@ -255,10 +290,10 @@ async function getGuestCountToday(serviceAccount, spreadsheetId) {
     });
     const rows = response.data.values || [];
     // Count rows where timestamp starts with today's date (skip header)
-    return rows.slice(1).filter((r) => r[0] && r[0].startsWith(today)).length;
+    return rows.slice(1).filter((r) => r[0] && r[0].startsWith(todayStr)).length;
   } catch {
     return 0;
   }
 }
 
-module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, appendGuestLog, getGuestCountToday, TABS };
+module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, appendGuestLog, appendPantryGuestLog, getGuestCountToday, TABS };

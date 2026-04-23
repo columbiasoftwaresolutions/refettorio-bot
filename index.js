@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const { validate } = require('./config');
 const { parseMessage } = require('./parser');
-const { ensureAllTabs, logService, logRaw, appendGuestLog, getGuestCountToday } = require('./sheets');
+const { ensureAllTabs, logService, logRaw, appendGuestLog, appendPantryGuestLog, getGuestCountToday } = require('./sheets');
 
 const config = validate();
 const app = express();
@@ -30,9 +30,10 @@ app.get('/checkin', (req, res) => {
   res.sendFile(path.join(__dirname, 'checkin.html'));
 });
 
-// API: submit a guest check-in
+// API: submit a restaurant guest check-in
 app.post('/api/checkin', async (req, res) => {
-  const { name, zipCode, visitType, ageRange, timestamp } = req.body;
+  console.log('[checkin] Restaurant check-in received:', JSON.stringify(req.body));
+  const { name, zipCode, visitType, ageRange, meals, timestamp } = req.body;
 
   try {
     await appendGuestLog(config.sheets.serviceAccount, config.sheets.id, {
@@ -40,11 +41,32 @@ app.post('/api/checkin', async (req, res) => {
       zipCode: zipCode || '',
       visitType: visitType || '',
       ageRange: ageRange || '',
+      meals: meals ?? 1,
       timestamp: timestamp || new Date().toISOString(),
     });
     res.json({ ok: true });
   } catch (err) {
     console.error('Guest check-in error:', err);
+    res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
+  }
+});
+
+// API: submit a pantry guest check-in
+app.post('/api/checkin/pantry', async (req, res) => {
+  console.log('[checkin] Pantry check-in received:', JSON.stringify(req.body));
+  const { name, zipCode, ageRange, bags, timestamp } = req.body;
+
+  try {
+    await appendPantryGuestLog(config.sheets.serviceAccount, config.sheets.id, {
+      name: name || '',
+      zipCode: zipCode || '',
+      ageRange: ageRange || '',
+      bags: bags ?? 1,
+      timestamp: timestamp || new Date().toISOString(),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Pantry check-in error:', err);
     res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
   }
 });
