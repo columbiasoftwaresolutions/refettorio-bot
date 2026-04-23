@@ -11,6 +11,8 @@ Rules:
 - "meal_type" is "lunch" or "dinner" based on context clues. If unclear, null.
 - If a demographic breakdown is given as percentages (e.g. "40% seniors"), compute counts using the total meals figure if available. If total is unknown, store the percentage as a number.
 - IMPORTANT: These messages come from busy kitchen staff on their phones. Approximate language is NORMAL and expected. Words like "about", "roughly", "maybe", "around", "like", "approximately", "give or take" should be treated as exact numbers — just use the number they gave. Do NOT ask for clarification on approximate numbers. Do NOT set confidence to "low" because of approximate language.
+- When staff give a range or two options like "15 or 14", "maybe 95 or 100", "between 80 and 90" — just pick the first number. Never drop the field because two numbers were given.
+- Voice-to-text often misspells names. "Boulder" means "Baldor". Interpret phonetic misspellings generously.
 - "confidence" should be "high" in almost all cases. Only set it to "low" if the message is truly incoherent or contradictory (e.g. "we served 50 total but 40 sitdown and 30 takeaway").
 - "clarification_needed" should be null in almost all cases. Only set it if something is genuinely contradictory or impossible to parse. Never ask for clarification about approximate numbers, missing fields, or informal language.
 - "logged_by" should be set to the phone number or name provided — leave it blank here, it will be filled by the server.
