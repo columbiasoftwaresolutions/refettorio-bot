@@ -1,10 +1,8 @@
 require('dotenv').config({ override: true });
 
+// Only Google Sheets credentials are required (for check-in app)
+// Twilio + Anthropic are optional (only needed for WhatsApp bot)
 const required = [
-  'TWILIO_ACCOUNT_SID',
-  'TWILIO_AUTH_TOKEN',
-  'TWILIO_WHATSAPP_NUMBER',
-  'ANTHROPIC_API_KEY',
   'GOOGLE_SHEETS_ID',
   'GOOGLE_SERVICE_ACCOUNT_JSON',
 ];
@@ -18,8 +16,8 @@ function validate() {
     process.exit(1);
   }
 
-  // Validate Twilio SID format
-  if (!process.env.TWILIO_ACCOUNT_SID.startsWith('AC')) {
+  // Validate Twilio SID format if provided
+  if (process.env.TWILIO_ACCOUNT_SID && !process.env.TWILIO_ACCOUNT_SID.startsWith('AC')) {
     console.error('❌ TWILIO_ACCOUNT_SID must start with "AC".');
     process.exit(1);
   }
@@ -35,12 +33,12 @@ function validate() {
 
   return {
     twilio: {
-      accountSid: process.env.TWILIO_ACCOUNT_SID,
-      authToken: process.env.TWILIO_AUTH_TOKEN,
-      whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER,
+      accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+      authToken: process.env.TWILIO_AUTH_TOKEN || '',
+      whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER || '',
     },
     anthropic: {
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
     },
     sheets: {
       id: process.env.GOOGLE_SHEETS_ID,
