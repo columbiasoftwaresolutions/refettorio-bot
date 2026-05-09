@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const { validate } = require('./config');
 const { parseMessage } = require('./parser');
-const { ensureAllTabs, logService, logRaw, appendGuestLog, appendPantryGuestLog, getGuestCountToday } = require('./sheets');
+const { ensureAllTabs, logService, logRaw, appendGuestLog, appendPantryGuestLog, appendBothLogs, getGuestCountToday } = require('./sheets');
 
 const config = validate();
 const app = express();
@@ -33,7 +33,7 @@ app.get('/checkin', (req, res) => {
 // API: submit a restaurant guest check-in
 app.post('/api/checkin', async (req, res) => {
   console.log('[checkin] Restaurant check-in received:', JSON.stringify(req.body));
-  const { name, zipCode, visitType, ageRange, meals, timestamp } = req.body;
+  const { name, zipCode, visitType, ageRange, meals, firstVisit, timestamp } = req.body;
 
   try {
     await appendGuestLog(config.sheets.serviceAccount, config.sheets.id, {
@@ -42,6 +42,7 @@ app.post('/api/checkin', async (req, res) => {
       visitType: visitType || '',
       ageRange: ageRange || '',
       meals: meals ?? 1,
+      firstVisit: firstVisit || false,
       timestamp: timestamp || new Date().toISOString(),
     });
     res.json({ ok: true });
@@ -54,7 +55,7 @@ app.post('/api/checkin', async (req, res) => {
 // API: submit a pantry guest check-in
 app.post('/api/checkin/pantry', async (req, res) => {
   console.log('[checkin] Pantry check-in received:', JSON.stringify(req.body));
-  const { name, zipCode, ageRange, bags, timestamp } = req.body;
+  const { name, zipCode, ageRange, bags, firstVisit, timestamp } = req.body;
 
   try {
     await appendPantryGuestLog(config.sheets.serviceAccount, config.sheets.id, {
@@ -62,11 +63,35 @@ app.post('/api/checkin/pantry', async (req, res) => {
       zipCode: zipCode || '',
       ageRange: ageRange || '',
       bags: bags ?? 1,
+      firstVisit: firstVisit || false,
       timestamp: timestamp || new Date().toISOString(),
     });
     res.json({ ok: true });
   } catch (err) {
     console.error('Pantry check-in error:', err);
+    res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
+  }
+});
+
+// API: submit a both (restaurant + pantry) guest check-in
+app.post('/api/checkin/both', async (req, res) => {
+  console.log('[checkin] Both check-in received:', JSON.stringify(req.body));
+  const { name, zipCode, visitType, ageRange, meals, bags, firstVisit, timestamp } = req.body;
+
+  try {
+    await appendBothLogs(config.sheets.serviceAccount, config.sheets.id, {
+      name: name || '',
+      zipCode: zipCode || '',
+      visitType: visitType || '',
+      ageRange: ageRange || '',
+      meals: meals ?? 1,
+      bags: bags ?? 1,
+      firstVisit: firstVisit || false,
+      timestamp: timestamp || new Date().toISOString(),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Both check-in error:', err);
     res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
   }
 });
