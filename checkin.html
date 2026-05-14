@@ -52,33 +52,6 @@
       font-weight: 700;
     }
 
-    /* Mode toggle */
-    .mode-toggle {
-      display: flex;
-      margin: 8px 12px 0;
-      background: #f0f0f0;
-      border-radius: 10px;
-      padding: 3px;
-    }
-
-    .mode-btn {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-      font-weight: 700;
-      border: none;
-      border-radius: 8px;
-      background: transparent;
-      color: #999;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .mode-btn.active {
-      background: #4CAF82;
-      color: #ffffff;
-    }
-
     /* Offline banner */
     .offline-banner {
       display: none;
@@ -97,22 +70,11 @@
     /* Main content */
     .main {
       flex: 1;
-      display: grid;
+      display: flex;
+      flex-direction: column;
       padding: 8px 12px;
       gap: 6px;
       overflow: hidden;
-    }
-
-    .main.restaurant-layout {
-      grid-template-rows: auto 1fr 1fr 1fr auto;
-    }
-
-    .main.pantry-layout {
-      grid-template-rows: auto auto 1fr 1fr auto;
-    }
-
-    .main.both-layout {
-      grid-template-rows: auto auto 1fr 1fr 1fr auto;
     }
 
     /* Section cards */
@@ -128,6 +90,15 @@
       display: none;
     }
 
+    .section-auto {
+      flex: 0 0 auto;
+    }
+
+    .section-flex {
+      flex: 1;
+      min-height: 0;
+    }
+
     .section-label {
       font-size: 13px;
       font-weight: 600;
@@ -138,6 +109,10 @@
     }
 
     /* Text input */
+    .autocomplete-wrapper {
+      position: relative;
+    }
+
     .text-input {
       width: 100%;
       font-size: 20px;
@@ -155,6 +130,44 @@
 
     .text-input::placeholder {
       color: #bbb;
+    }
+
+    /* Autocomplete dropdown */
+    .autocomplete-list {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 2px solid #4CAF82;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      z-index: 50;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .autocomplete-list.show {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 10px 12px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .autocomplete-item:active {
+      background: #e8f5e9;
+    }
+
+    .autocomplete-item .ac-zip {
+      color: #999;
+      font-size: 15px;
     }
 
     /* Other zip input row */
@@ -327,17 +340,15 @@
       text-align: center;
     }
 
-    /* First Visit toggle */
+    /* First Visit toggle (inline in age section) */
     .first-visit-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      margin-top: 6px;
     }
 
     .first-visit-btn {
-      flex: 1;
-      min-height: 44px;
-      font-size: 18px;
+      width: 100%;
+      min-height: 40px;
+      font-size: 17px;
       font-weight: 600;
       border: 2px solid #e0e0e0;
       border-radius: 10px;
@@ -351,6 +362,32 @@
     .first-visit-btn.selected {
       background: #4CAF82;
       border-color: #4CAF82;
+      color: #ffffff;
+    }
+
+    /* Service type toggle (inside form) */
+    .service-toggle {
+      display: flex;
+      background: #e8e8e8;
+      border-radius: 10px;
+      padding: 3px;
+    }
+
+    .service-btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #999;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .service-btn.active {
+      background: #4CAF82;
       color: #ffffff;
     }
 
@@ -432,55 +469,64 @@
 
   <div class="flash" id="flash"></div>
 
-  <!-- Mode Toggle -->
-  <div class="mode-toggle">
-    <button class="mode-btn active" id="modeRestaurant">Restaurant</button>
-    <button class="mode-btn" id="modePantry">Pantry</button>
-    <button class="mode-btn" id="modeBoth">Both</button>
-  </div>
+  <div class="main" id="mainContent">
 
-  <div class="main restaurant-layout" id="mainContent">
-
-    <!-- Name -->
-    <div class="section" id="sectionName">
+    <!-- 1. Name with autocomplete -->
+    <div class="section section-auto" id="sectionName">
       <div class="section-label">Name (optional)</div>
-      <input type="text" class="text-input" id="nameInput" placeholder="First name or skip" autocomplete="off" autocorrect="off" autocapitalize="words">
-    </div>
-
-    <!-- Bags counter (pantry / both — hidden by default) -->
-    <div class="section hidden" id="sectionBags">
-      <div class="section-label">Number of Bags</div>
-      <div class="counter">
-        <button class="counter-btn" id="bagsMinus">&minus;</button>
-        <div class="counter-value" id="bagsValue">1</div>
-        <button class="counter-btn" id="bagsPlus">+</button>
+      <div class="autocomplete-wrapper">
+        <input type="text" class="text-input" id="nameInput" placeholder="First name or skip" autocomplete="off" autocorrect="off" autocapitalize="words" tabindex="1">
+        <div class="autocomplete-list" id="autocompleteList"></div>
       </div>
     </div>
 
-    <!-- Zip Code -->
-    <div class="section" id="sectionZip">
+    <!-- 2. Zip Code -->
+    <div class="section section-flex" id="sectionZip">
       <div class="section-label">Zip Code</div>
       <div class="btn-grid zip-grid">
-        <button class="btn" data-zip="10026">10026</button>
-        <button class="btn" data-zip="10027">10027</button>
-        <button class="btn" data-zip="10030">10030</button>
-        <button class="btn" data-zip="10031">10031</button>
-        <button class="btn" data-zip="10035">10035</button>
-        <button class="btn" data-zip="10037">10037</button>
-        <button class="btn" data-zip="10039">10039</button>
-        <button class="btn btn-other" data-zip="other">Other</button>
+        <button class="btn" data-zip="10026" tabindex="2">10026</button>
+        <button class="btn" data-zip="10027" tabindex="2">10027</button>
+        <button class="btn" data-zip="10029" tabindex="2">10029</button>
+        <button class="btn" data-zip="10031" tabindex="2">10031</button>
+        <button class="btn" data-zip="10035" tabindex="2">10035</button>
+        <button class="btn" data-zip="10037" tabindex="2">10037</button>
+        <button class="btn" data-zip="10039" tabindex="2">10039</button>
+        <button class="btn btn-other" data-zip="other" tabindex="2">Other</button>
       </div>
       <div class="other-zip-row" id="otherZipRow">
-        <input type="number" class="zip-input" id="otherZipInput" placeholder="Zip" maxlength="5" inputmode="numeric">
-        <button class="zip-ok-btn" id="otherZipOk">OK</button>
+        <input type="number" class="zip-input" id="otherZipInput" placeholder="Zip" maxlength="5" inputmode="numeric" tabindex="2">
+        <button class="zip-ok-btn" id="otherZipOk" tabindex="2">OK</button>
       </div>
     </div>
 
-    <!-- Visit Type (restaurant / both) -->
-    <div class="section" id="sectionVisit">
+    <!-- 3. Age Range + First Visit -->
+    <div class="section section-flex" id="sectionAge">
+      <div class="section-label">Age Range</div>
+      <div class="btn-grid cols-3">
+        <button class="btn" data-age="Under 18" tabindex="3">Under 18</button>
+        <button class="btn" data-age="18-59" tabindex="3">18 – 59</button>
+        <button class="btn" data-age="60+" tabindex="3">60+</button>
+      </div>
+      <div class="first-visit-row">
+        <button class="first-visit-btn" id="firstVisitBtn" tabindex="4">First Visit</button>
+      </div>
+    </div>
+
+    <!-- 4. Service Type -->
+    <div class="section section-auto" id="sectionService">
+      <div class="section-label">Service Type</div>
+      <div class="service-toggle">
+        <button class="service-btn" id="modeRestaurant" data-mode="restaurant" tabindex="5">Restaurant</button>
+        <button class="service-btn" id="modePantry" data-mode="pantry" tabindex="5">Pantry</button>
+        <button class="service-btn" id="modeBoth" data-mode="both" tabindex="5">Both</button>
+      </div>
+    </div>
+
+    <!-- 5. Visit Type (restaurant / both — hidden until mode selected) -->
+    <div class="section section-flex hidden" id="sectionVisit">
       <div class="section-label">Visit Type</div>
       <div class="btn-grid cols-2">
-        <button class="btn" data-visit="Dining In" id="dineinBtn">
+        <button class="btn" data-visit="Dining In" id="dineinBtn" tabindex="6">
           <span id="dineinLabel">Dining In</span>
           <span id="dineinCounter" class="inline-counter hidden">
             <span class="inline-counter-btn" id="guestsMinus">&minus;</span>
@@ -488,7 +534,7 @@
             <span class="inline-counter-btn" id="guestsPlus">+</span>
           </span>
         </button>
-        <button class="btn" data-visit="Taking Away" id="takeawayBtn">
+        <button class="btn" data-visit="Taking Away" id="takeawayBtn" tabindex="6">
           <span id="takeawayLabel">Taking Away</span>
           <span id="takeawayCounter" class="inline-counter hidden">
             <span class="inline-counter-btn" id="mealsMinus">&minus;</span>
@@ -499,27 +545,20 @@
       </div>
     </div>
 
-    <!-- Age Range -->
-    <div class="section" id="sectionAge">
-      <div class="section-label">Age Range</div>
-      <div class="btn-grid cols-3">
-        <button class="btn" data-age="Under 18">Under 18</button>
-        <button class="btn" data-age="18-59">18 – 59</button>
-        <button class="btn" data-age="60+">60+</button>
-      </div>
-    </div>
-
-    <!-- First Visit -->
-    <div class="section" id="sectionFirstVisit">
-      <div class="first-visit-row">
-        <button class="first-visit-btn" id="firstVisitBtn">First Visit</button>
+    <!-- 6. Bags counter (pantry / both — hidden until mode selected) -->
+    <div class="section section-flex hidden" id="sectionBags">
+      <div class="section-label">Number of Bags</div>
+      <div class="counter">
+        <button class="counter-btn" id="bagsMinus" tabindex="7">&minus;</button>
+        <div class="counter-value" id="bagsValue">1</div>
+        <button class="counter-btn" id="bagsPlus" tabindex="7">+</button>
       </div>
     </div>
 
   </div>
 
   <div class="submit-bar">
-    <button class="btn-submit" id="submitBtn" disabled>Check In</button>
+    <button class="btn-submit" id="submitBtn" disabled tabindex="8">Check In</button>
   </div>
 
   <div class="queue-count" id="queueCount"></div>
@@ -530,17 +569,19 @@
     const COUNT_KEY = 'refettorio_guest_count';
     const COUNT_DATE_KEY = 'refettorio_guest_count_date';
     const MODE_KEY = 'refettorio_checkin_mode';
+    const HISTORY_KEY = 'refettorio_guest_history';
 
-    let mode = localStorage.getItem(MODE_KEY) || 'restaurant';
+    let mode = localStorage.getItem(MODE_KEY) || '';
     let guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, firstVisit: false };
     let localCount = loadLocalCount();
 
     const submitBtn = document.getElementById('submitBtn');
     const nameInput = document.getElementById('nameInput');
     const mainContent = document.getElementById('mainContent');
+    const autocompleteList = document.getElementById('autocompleteList');
 
     // ─── Init ─────────────────────────────────────────────────────
-    applyMode(mode);
+    if (mode) applyMode(mode, false);
     updateCountDisplay();
     fetchServerCount();
     processQueue();
@@ -559,44 +600,135 @@
       document.getElementById('offlineBanner').classList.add('show');
     }
 
-    // ─── Mode Toggle ──────────────────────────────────────────────
-    document.getElementById('modeRestaurant').addEventListener('click', () => applyMode('restaurant'));
-    document.getElementById('modePantry').addEventListener('click', () => applyMode('pantry'));
-    document.getElementById('modeBoth').addEventListener('click', () => applyMode('both'));
+    // ─── Guest History (autocomplete) ─────────────────────────────
+    function getGuestHistory() {
+      try {
+        return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {};
+      } catch {
+        return {};
+      }
+    }
 
-    function applyMode(newMode) {
+    function saveGuestToHistory(name, zipCode) {
+      if (!name || name === 'Anonymous Guest') return;
+      const history = getGuestHistory();
+      history[name.toLowerCase()] = { name: name, zipCode: zipCode };
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    nameInput.addEventListener('input', () => {
+      const val = nameInput.value.trim().toLowerCase();
+      if (val.length < 1) {
+        hideAutocomplete();
+        return;
+      }
+      const history = getGuestHistory();
+      const matches = Object.values(history)
+        .filter(g => g.name.toLowerCase().startsWith(val))
+        .slice(0, 5);
+      if (matches.length === 0) {
+        hideAutocomplete();
+        return;
+      }
+      autocompleteList.innerHTML = matches.map(g =>
+        '<div class="autocomplete-item" data-acname="' + escapeHtml(g.name) + '" data-aczip="' + escapeHtml(g.zipCode) + '">' +
+          '<span>' + escapeHtml(g.name) + '</span>' +
+          '<span class="ac-zip">' + escapeHtml(g.zipCode) + '</span>' +
+        '</div>'
+      ).join('');
+      autocompleteList.classList.add('show');
+    });
+
+    autocompleteList.addEventListener('click', (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (!item) return;
+      const name = item.getAttribute('data-acname');
+      const zip = item.getAttribute('data-aczip');
+      nameInput.value = name;
+      guestData.name = name;
+      selectZipCode(zip);
+      hideAutocomplete();
+    });
+
+    nameInput.addEventListener('blur', () => {
+      // Delay to allow click on autocomplete item
+      setTimeout(hideAutocomplete, 200);
+    });
+
+    function hideAutocomplete() {
+      autocompleteList.classList.remove('show');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Programmatically select a zip code
+    function selectZipCode(zip) {
+      // Clear current selection
+      document.querySelectorAll('[data-zip]').forEach(b => b.classList.remove('selected'));
+      document.getElementById('otherZipRow').classList.remove('show');
+      document.getElementById('otherZipInput').value = '';
+
+      // Try to find a matching button
+      const matchBtn = document.querySelector('[data-zip="' + zip + '"]');
+      if (matchBtn) {
+        matchBtn.classList.add('selected');
+        guestData.zipCode = zip;
+      } else if (zip) {
+        // It's a custom zip — set as "other"
+        document.querySelector('[data-zip="other"]').classList.add('selected');
+        document.getElementById('otherZipInput').value = zip;
+        guestData.zipCode = zip;
+      }
+      updateSubmitState();
+    }
+
+    // ─── Mode / Service Type ──────────────────────────────────────
+    document.querySelectorAll('[data-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newMode = btn.getAttribute('data-mode');
+        if (mode === newMode) return; // already selected
+        applyMode(newMode, false);
+      });
+    });
+
+    function applyMode(newMode, shouldReset) {
       mode = newMode;
       localStorage.setItem(MODE_KEY, mode);
 
-      document.getElementById('modeRestaurant').classList.toggle('active', mode === 'restaurant');
-      document.getElementById('modePantry').classList.toggle('active', mode === 'pantry');
-      document.getElementById('modeBoth').classList.toggle('active', mode === 'both');
+      // Update toggle buttons
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
 
-      // Show/hide sections
+      // Show/hide conditional sections
       const showVisit = mode === 'restaurant' || mode === 'both';
       const showBags = mode === 'pantry' || mode === 'both';
       document.getElementById('sectionVisit').classList.toggle('hidden', !showVisit);
       document.getElementById('sectionBags').classList.toggle('hidden', !showBags);
 
-      // Reset inline counters
-      document.getElementById('takeawayCounter').classList.add('hidden');
-      document.getElementById('takeawayLabel').textContent = 'Taking Away';
-      document.getElementById('dineinCounter').classList.add('hidden');
-      document.getElementById('dineinLabel').textContent = 'Dining In';
-
-      // Update grid layout
-      if (mode === 'both') {
-        mainContent.className = 'main both-layout';
-      } else if (mode === 'pantry') {
-        mainContent.className = 'main pantry-layout';
-      } else {
-        mainContent.className = 'main restaurant-layout';
+      // Reset only mode-specific data (NOT common fields)
+      if (!showVisit) {
+        guestData.visitType = '';
+        guestData.meals = 1;
+        guestData.guests = 1;
+        document.querySelectorAll('[data-visit]').forEach(b => b.classList.remove('selected'));
+        document.getElementById('takeawayCounter').classList.add('hidden');
+        document.getElementById('takeawayLabel').textContent = 'Taking Away';
+        document.getElementById('dineinCounter').classList.add('hidden');
+        document.getElementById('dineinLabel').textContent = 'Dining In';
+        document.getElementById('mealsValue').textContent = '1';
+        document.getElementById('guestsValue').textContent = '1';
+      }
+      if (!showBags) {
+        guestData.bags = 1;
+        document.getElementById('bagsValue').textContent = '1';
       }
 
-      resetForm();
+      if (shouldReset) resetForm();
+      updateSubmitState();
     }
 
-    // ─── Inline Guests Counter (inside Dining In button) ─────────
+    // ─── Inline Guests Counter (Dining In) ────────────────────────
     document.getElementById('guestsPlus').addEventListener('click', (e) => {
       e.stopPropagation();
       guestData.guests++;
@@ -611,7 +743,7 @@
       }
     });
 
-    // ─── Inline Meals Counter (inside Taking Away button) ─────────
+    // ─── Inline Meals Counter (Taking Away) ───────────────────────
     document.getElementById('mealsPlus').addEventListener('click', (e) => {
       e.stopPropagation();
       guestData.meals++;
@@ -686,7 +818,6 @@
           guestData.visitType = btn.getAttribute('data-visit');
         }
 
-        // Show inline counter on the selected visit type
         const isDineIn = guestData.visitType === 'Dining In';
         const isTakeaway = guestData.visitType === 'Taking Away';
 
@@ -744,13 +875,12 @@
         timestamp: new Date().toISOString(),
       };
 
-      // Calculate total people for guest count
       let totalPeople = 1;
 
       if (mode === 'restaurant' || mode === 'both') {
         entry.visitType = guestData.visitType;
         if (guestData.visitType === 'Dining In') {
-          entry.meals = guestData.guests; // each guest = 1 meal
+          entry.meals = guestData.guests;
           totalPeople = guestData.guests;
         } else {
           entry.meals = guestData.meals;
@@ -761,6 +891,9 @@
       if (mode === 'pantry' || mode === 'both') {
         entry.bags = guestData.bags;
       }
+
+      // Save to guest history for autocomplete
+      saveGuestToHistory(guestData.name, guestData.zipCode);
 
       localCount += totalPeople;
       saveLocalCount();
@@ -784,7 +917,7 @@
     }
 
     function isReady() {
-      if (!guestData.zipCode || !guestData.ageRange) return false;
+      if (!guestData.zipCode || !guestData.ageRange || !mode) return false;
       if ((mode === 'restaurant' || mode === 'both') && !guestData.visitType) return false;
       return true;
     }
@@ -813,6 +946,9 @@
       document.getElementById('dineinCounter').classList.add('hidden');
       document.getElementById('dineinLabel').textContent = 'Dining In';
       document.getElementById('bagsValue').textContent = '1';
+      // Keep mode-specific sections visible (don't hide them)
+      // Reset visit type selection within visible sections
+      hideAutocomplete();
       updateSubmitState();
       nameInput.focus();
     }
