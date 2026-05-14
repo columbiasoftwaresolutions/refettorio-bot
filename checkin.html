@@ -670,6 +670,24 @@
       hideAutocomplete();
     });
 
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab' && autocompleteList.classList.contains('show')) {
+        // Select the first autocomplete item
+        const firstItem = autocompleteList.querySelector('.autocomplete-item');
+        if (firstItem) {
+          e.preventDefault();
+          const name = firstItem.getAttribute('data-acname');
+          const zip = firstItem.getAttribute('data-aczip');
+          nameInput.value = name;
+          guestData.name = name;
+          selectZipCode(zip);
+          hideAutocomplete();
+          // Move focus to next field
+          document.querySelector('[data-zip]').focus();
+        }
+      }
+    });
+
     nameInput.addEventListener('blur', () => {
       // Delay to allow click on autocomplete item
       setTimeout(hideAutocomplete, 200);
