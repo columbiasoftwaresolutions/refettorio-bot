@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const { validate } = require('./config');
 const { parseMessage } = require('./parser');
-const { ensureAllTabs, logService, logRaw, appendGuestLog, appendPantryGuestLog, appendBothLogs, getGuestCountToday } = require('./sheets');
+const { ensureAllTabs, logService, logRaw, appendGuestLog, appendPantryGuestLog, appendBothLogs, getGuestCountToday, getGuestHistory } = require('./sheets');
 
 const config = validate();
 const app = express();
@@ -93,6 +93,17 @@ app.post('/api/checkin/both', async (req, res) => {
   } catch (err) {
     console.error('Both check-in error:', err);
     res.status(500).json({ ok: false, error: 'Failed to write to sheet' });
+  }
+});
+
+// API: get guest history for autocomplete
+app.get('/api/checkin/guests', async (req, res) => {
+  try {
+    const guests = await getGuestHistory(config.sheets.serviceAccount, config.sheets.id);
+    res.json({ guests });
+  } catch (err) {
+    console.error('Guest history error:', err);
+    res.json({ guests: [] });
   }
 });
 

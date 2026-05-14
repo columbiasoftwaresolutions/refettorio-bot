@@ -302,4 +302,29 @@ async function getGuestCountToday(serviceAccount, spreadsheetId) {
   }
 }
 
-module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, appendGuestLog, appendPantryGuestLog, appendBothLogs, getGuestCountToday, TABS };
+// Get unique guest names + zip codes from Guest Log (for autocomplete)
+async function getGuestHistory(serviceAccount, spreadsheetId) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+
+  try {
+    const response = await sheetsClient.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${TABS.GUEST_LOG}'!B:C`, // Name, Zip Code columns
+    });
+    const rows = response.data.values || [];
+    const guests = {};
+    // Skip header, use most recent zip for each name
+    for (const row of rows.slice(1)) {
+      const name = (row[0] || '').trim();
+      const zip = (row[1] || '').trim();
+      if (name && name !== 'Anonymous Guest') {
+        guests[name.toLowerCase()] = { name, zipCode: zip };
+      }
+    }
+    return Object.values(guests);
+  } catch {
+    return [];
+  }
+}
+
+module.exports = { ensureAllTabs, logService, logRaw, getSheetsClient, appendDailyLog, appendFoodRescue, appendRawLog, appendGuestLog, appendPantryGuestLog, appendBothLogs, getGuestCountToday, getGuestHistory, TABS };

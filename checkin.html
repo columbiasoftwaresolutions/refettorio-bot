@@ -74,7 +74,7 @@
       flex-direction: column;
       padding: 8px 12px;
       gap: 6px;
-      overflow: hidden;
+      overflow: visible;
     }
 
     /* Section cards */
@@ -584,6 +584,7 @@
     if (mode) applyMode(mode, false);
     updateCountDisplay();
     fetchServerCount();
+    fetchGuestHistory();
     processQueue();
 
     // Online/offline
@@ -614,6 +615,25 @@
       const history = getGuestHistory();
       history[name.toLowerCase()] = { name: name, zipCode: zipCode };
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    // Load guest history from server (Google Sheet) and merge into localStorage
+    async function fetchGuestHistory() {
+      try {
+        const res = await fetch('/api/checkin/guests');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.guests || data.guests.length === 0) return;
+        const history = getGuestHistory();
+        for (const g of data.guests) {
+          const key = g.name.toLowerCase();
+          // Server data fills in gaps; local data takes priority (more recent)
+          if (!history[key]) {
+            history[key] = { name: g.name, zipCode: g.zipCode };
+          }
+        }
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      } catch {}
     }
 
     nameInput.addEventListener('input', () => {
