@@ -30,10 +30,10 @@ const HEADERS = {
     'Timestamp', 'Phone Number', 'Raw Message', 'Parsed Successfully (Y/N)', 'Notes',
   ],
   [TABS.GUEST_LOG]: [
-    'Timestamp', 'Name', 'Zip Code', 'Visit Type', 'Age Range', 'Meals', 'First Visit',
+    'Timestamp', 'Name', 'Zip Code', 'Visit Type', 'Age Range', 'Children', 'Meals', 'First Visit',
   ],
   [TABS.PANTRY_GUEST_LOG]: [
-    'Timestamp', 'Name', 'Zip Code', 'Age Range', 'Bags', 'First Visit',
+    'Timestamp', 'Name', 'Zip Code', 'Age Range', 'Children', 'Bags', 'First Visit',
   ],
 };
 
@@ -247,14 +247,14 @@ async function logRaw(serviceAccount, spreadsheetId, { phoneNumber, rawMessage, 
 }
 
 // Append a restaurant guest check-in row
-async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, meals, firstVisit, timestamp }) {
+async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp }) {
   const sheetsClient = await getSheetsClient(serviceAccount);
   const ts = formatTimestamp(timestamp || new Date());
-  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || '', meals ?? 1, firstVisit ? 'Yes' : ''];
+  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || '', children || 0, meals ?? 1, firstVisit ? 'Yes' : ''];
 
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId,
-    range: `'${TABS.GUEST_LOG}'!A:G`,
+    range: `'${TABS.GUEST_LOG}'!A:H`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
@@ -262,14 +262,14 @@ async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, vi
 }
 
 // Append a pantry guest check-in row
-async function appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, bags, firstVisit, timestamp }) {
+async function appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, children, bags, firstVisit, timestamp }) {
   const sheetsClient = await getSheetsClient(serviceAccount);
   const ts = formatTimestamp(timestamp || new Date());
-  const row = [ts, name || '', zipCode || '', ageRange || '', bags ?? 1, firstVisit ? 'Yes' : ''];
+  const row = [ts, name || '', zipCode || '', ageRange || '', children || 0, bags ?? 1, firstVisit ? 'Yes' : ''];
 
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId,
-    range: `'${TABS.PANTRY_GUEST_LOG}'!A:F`,
+    range: `'${TABS.PANTRY_GUEST_LOG}'!A:G`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
@@ -277,9 +277,9 @@ async function appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCo
 }
 
 // Append to both Guest Log and Pantry Guest Log (for "Both" mode)
-async function appendBothLogs(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, meals, bags, firstVisit, timestamp }) {
-  await appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, meals, firstVisit, timestamp });
-  await appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, bags, firstVisit, timestamp });
+async function appendBothLogs(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, bags, firstVisit, timestamp }) {
+  await appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp });
+  await appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, children, bags, firstVisit, timestamp });
 }
 
 // Get today's guest count from the Guest Log tab

@@ -33,7 +33,7 @@ app.get('/checkin', (req, res) => {
 // API: submit a restaurant guest check-in
 app.post('/api/checkin', async (req, res) => {
   console.log('[checkin] Restaurant check-in received:', JSON.stringify(req.body));
-  const { name, zipCode, visitType, ageRange, meals, firstVisit, timestamp } = req.body;
+  const { name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp } = req.body;
 
   try {
     await appendGuestLog(config.sheets.serviceAccount, config.sheets.id, {
@@ -41,6 +41,7 @@ app.post('/api/checkin', async (req, res) => {
       zipCode: zipCode || '',
       visitType: visitType || '',
       ageRange: ageRange || '',
+      children: children || 0,
       meals: meals ?? 1,
       firstVisit: firstVisit || false,
       timestamp: timestamp || new Date().toISOString(),
@@ -55,13 +56,14 @@ app.post('/api/checkin', async (req, res) => {
 // API: submit a pantry guest check-in
 app.post('/api/checkin/pantry', async (req, res) => {
   console.log('[checkin] Pantry check-in received:', JSON.stringify(req.body));
-  const { name, zipCode, ageRange, bags, firstVisit, timestamp } = req.body;
+  const { name, zipCode, ageRange, children, bags, firstVisit, timestamp } = req.body;
 
   try {
     await appendPantryGuestLog(config.sheets.serviceAccount, config.sheets.id, {
       name: name || '',
       zipCode: zipCode || '',
       ageRange: ageRange || '',
+      children: children || 0,
       bags: bags ?? 1,
       firstVisit: firstVisit || false,
       timestamp: timestamp || new Date().toISOString(),
@@ -76,7 +78,7 @@ app.post('/api/checkin/pantry', async (req, res) => {
 // API: submit a both (restaurant + pantry) guest check-in
 app.post('/api/checkin/both', async (req, res) => {
   console.log('[checkin] Both check-in received:', JSON.stringify(req.body));
-  const { name, zipCode, visitType, ageRange, meals, bags, firstVisit, timestamp } = req.body;
+  const { name, zipCode, visitType, ageRange, children, meals, bags, firstVisit, timestamp } = req.body;
 
   try {
     await appendBothLogs(config.sheets.serviceAccount, config.sheets.id, {
@@ -84,6 +86,7 @@ app.post('/api/checkin/both', async (req, res) => {
       zipCode: zipCode || '',
       visitType: visitType || '',
       ageRange: ageRange || '',
+      children: children || 0,
       meals: meals ?? 1,
       bags: bags ?? 1,
       firstVisit: firstVisit || false,

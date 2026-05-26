@@ -340,6 +340,42 @@
       text-align: center;
     }
 
+    /* Children counter row */
+    .children-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .children-label {
+      font-size: 17px;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .children-count {
+      font-size: 24px;
+      font-weight: 700;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .children-counter-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 22px;
+      border: 2px solid #e0e0e0;
+      background: #fff;
+      color: #2d2d2d;
+      border-radius: 50%;
+    }
+
+    .children-counter-btn:active {
+      background: #e8f5e9;
+    }
+
     /* First Visit toggle (inline in age section) */
     .first-visit-row {
       margin-top: 6px;
@@ -499,13 +535,19 @@
       </div>
     </div>
 
-    <!-- 3. Age Range + First Visit -->
+    <!-- 3. Age Range + Children + First Visit -->
     <div class="section section-flex" id="sectionAge">
       <div class="section-label">Age Range</div>
       <div class="btn-grid cols-3">
         <button class="btn" data-age="Under 18" tabindex="3">Under 18</button>
         <button class="btn" data-age="18-59" tabindex="3">18 – 59</button>
         <button class="btn" data-age="60+" tabindex="3">60+</button>
+      </div>
+      <div class="children-row">
+        <span class="children-label">Children:</span>
+        <span class="inline-counter-btn children-counter-btn" id="childrenMinus" tabindex="3">&minus;</span>
+        <span class="children-count" id="childrenValue">0</span>
+        <span class="inline-counter-btn children-counter-btn" id="childrenPlus" tabindex="3">+</span>
       </div>
       <div class="first-visit-row">
         <button class="first-visit-btn" id="firstVisitBtn" tabindex="4">First Visit</button>
@@ -572,7 +614,7 @@
     const HISTORY_KEY = 'refettorio_guest_history';
 
     let mode = localStorage.getItem(MODE_KEY) || '';
-    let guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, firstVisit: false };
+    let guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, children: 0, firstVisit: false };
     let localCount = loadLocalCount();
 
     const submitBtn = document.getElementById('submitBtn');
@@ -809,6 +851,19 @@
       }
     });
 
+    // ─── Children Counter ──────────────────────────────────────────
+    document.getElementById('childrenPlus').addEventListener('click', () => {
+      guestData.children++;
+      document.getElementById('childrenValue').textContent = guestData.children;
+    });
+
+    document.getElementById('childrenMinus').addEventListener('click', () => {
+      if (guestData.children > 0) {
+        guestData.children--;
+        document.getElementById('childrenValue').textContent = guestData.children;
+      }
+    });
+
     // ─── Zip Code buttons ─────────────────────────────────────────
     document.querySelectorAll('[data-zip]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -909,6 +964,7 @@
         name: guestData.name,
         zipCode: guestData.zipCode,
         ageRange: guestData.ageRange,
+        children: guestData.children,
         firstVisit: guestData.firstVisit,
         timestamp: new Date().toISOString(),
       };
@@ -918,12 +974,15 @@
       if (mode === 'restaurant' || mode === 'both') {
         entry.visitType = guestData.visitType;
         if (guestData.visitType === 'Dining In') {
-          entry.meals = guestData.guests;
-          totalPeople = guestData.guests;
+          entry.meals = guestData.guests + guestData.children;
+          totalPeople = guestData.guests + guestData.children;
         } else {
-          entry.meals = guestData.meals;
-          totalPeople = guestData.meals;
+          entry.meals = guestData.meals + guestData.children;
+          totalPeople = guestData.meals + guestData.children;
         }
+      } else {
+        // Pantry mode — children still count as people
+        totalPeople = 1 + guestData.children;
       }
 
       if (mode === 'pantry' || mode === 'both') {
@@ -971,7 +1030,7 @@
     }
 
     function resetForm() {
-      guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, firstVisit: false };
+      guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, children: 0, firstVisit: false };
       nameInput.value = '';
       document.querySelectorAll('.btn.selected').forEach((b) => b.classList.remove('selected'));
       document.getElementById('firstVisitBtn').classList.remove('selected');
@@ -984,6 +1043,7 @@
       document.getElementById('dineinCounter').classList.add('hidden');
       document.getElementById('dineinLabel').textContent = 'Dining In';
       document.getElementById('bagsValue').textContent = '1';
+      document.getElementById('childrenValue').textContent = '0';
       // Keep mode-specific sections visible (don't hide them)
       // Reset visit type selection within visible sections
       hideAutocomplete();
