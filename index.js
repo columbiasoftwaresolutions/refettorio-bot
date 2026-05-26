@@ -270,6 +270,7 @@ const PORT = process.env.PORT || 3000;
 
 ensureAllTabs(config.sheets.serviceAccount, config.sheets.id)
   .then(() => {
+    console.log('✅ Sheets tabs verified');
     app.listen(PORT, () => {
       console.log(`✅ Refettorio bot listening on port ${PORT}`);
     });
@@ -277,5 +278,8 @@ ensureAllTabs(config.sheets.serviceAccount, config.sheets.id)
   .catch((err) => {
     console.error('❌ Failed to initialize Google Sheets tabs:', err.message);
     console.error('Check your GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_SHEETS_ID.');
-    process.exit(1);
+    if (!process.env.VERCEL) process.exit(1);
   });
+
+// Export for Vercel serverless
+module.exports = app;
