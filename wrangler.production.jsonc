@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "refettorio-bot",
+  "account_id": "ba13014db202d039308b92baaaeccc2c",
+  "main": "./worker-entry.mjs",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "CLOUDFLARE_WORKER": "1"
+  },
+  "rules": [
+    {
+      "type": "Text",
+      "globs": [
+        "**/*.html"
+      ],
+      "fallthrough": true
+    }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "triggers": {
+    "crons": []
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHECKIN_SUBMISSIONS",
+        "class_name": "CheckinSubmission"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1-checkin-submissions",
+      "new_sqlite_classes": [
+        "CheckinSubmission"
+      ]
+    }
+  ],
+  "keep_vars": true
+}

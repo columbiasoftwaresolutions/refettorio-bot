@@ -2,3 +2,10 @@
 node_modules/
 *.log
 .claude/
+
+# Cloudflare local output and secrets
+.wrangler/
+.dev.vars*
+
+# Generated isolated test deployment configuration
+/wrangler.migration-test.json

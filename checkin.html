@@ -492,6 +492,46 @@
     .queue-count.show {
       display: block;
     }
+    .review-trigger {
+      margin: 0 12px 8px;
+      padding: 12px;
+      border: 2px solid #a06010;
+      border-radius: 8px;
+      background: #fff5dc;
+      color: #633b08;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .review-dialog {
+      margin: auto;
+      width: min(520px, 92vw);
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 20px;
+      border: none;
+      border-radius: 12px;
+      color: #2d2d2d;
+    }
+
+    .review-dialog::backdrop { background: #0008; }
+    .review-dialog h2 { font-size: 22px; margin-bottom: 8px; }
+    .review-dialog p { margin-bottom: 12px; line-height: 1.4; }
+    .review-card { padding: 16px 0; border-top: 1px solid #ddd; }
+    .review-card h3 { margin-bottom: 8px; }
+    .review-choice, .review-close {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      background: #fff;
+      color: #2d2d2d;
+      font-size: 16px;
+    }
+    .review-choice:disabled { opacity: 0.5; }
+    .review-message { color: #a12d20; }
   </style>
 </head>
 <body>
@@ -599,6 +639,16 @@
 
   </div>
 
+  <button class="review-trigger" id="reviewQueueButton" type="button" hidden>Review an uncertain save</button>
+
+  <dialog class="review-dialog" id="reviewDialog" aria-labelledby="reviewHeading">
+    <h2 id="reviewHeading">Check uncertain saves</h2>
+    <p>Check the Google Sheet for each entry before choosing an action.</p>
+    <p class="review-message" id="reviewMessage" role="status"></p>
+    <div id="reviewEntries"></div>
+    <button class="review-close" id="closeReviewButton" type="button">Close</button>
+  </dialog>
+
   <div class="submit-bar">
     <button class="btn-submit" id="submitBtn" disabled tabindex="8">Check In</button>
   </div>
@@ -613,6 +663,8 @@
     const MODE_KEY = 'refettorio_checkin_mode';
     const HISTORY_KEY = 'refettorio_guest_history';
 
+    let processing = false;
+    const reviewInFlight = new Set();
     let mode = localStorage.getItem(MODE_KEY) || '';
     let guestData = { name: '', zipCode: '', visitType: '', ageRange: '', meals: 1, guests: 1, bags: 1, children: 0, firstVisit: false };
     let localCount = loadLocalCount();
@@ -627,6 +679,7 @@
     updateCountDisplay();
     fetchServerCount();
     fetchGuestHistory();
+    updateQueueDisplay();
     processQueue();
 
     // Online/offline
@@ -960,6 +1013,7 @@
       guestData.name = rawName || 'Anonymous Guest';
 
       const entry = {
+        requestId: crypto.randomUUID(),
         mode: mode,
         name: guestData.name,
         zipCode: guestData.zipCode,
@@ -1074,15 +1128,98 @@
     function updateQueueDisplay() {
       const queue = getQueue();
       const el = document.getElementById('queueCount');
+      const reviewCount = queue.filter(entry => entry.needsReview).length;
+      const reviewButton = document.getElementById('reviewQueueButton');
+      reviewButton.hidden = reviewCount === 0;
+      reviewButton.textContent = 'Review ' + reviewCount + (reviewCount === 1 ? ' uncertain save' : ' uncertain saves');
       if (queue.length > 0) {
-        el.textContent = queue.length + ' queued';
+        el.textContent = queue.length + ' queued' + (reviewCount ? ' · ' + reviewCount + ' need review' : '');
         el.classList.add('show');
       } else {
         el.classList.remove('show');
       }
     }
 
-    let processing = false;
+    function checkinEndpoint(entry) {
+      if (entry.mode === 'pantry') return '/api/checkin/pantry';
+      if (entry.mode === 'both') return '/api/checkin/both';
+      return '/api/checkin';
+    }
+
+    function renderQueueReview() {
+      const list = document.getElementById('reviewEntries');
+      list.replaceChildren();
+      const entries = getQueue().filter(entry => entry.needsReview);
+      if (!entries.length) {
+        const message = document.createElement('p');
+        message.textContent = 'All uncertain saves have been reviewed.';
+        list.append(message);
+      }
+      for (const entry of entries) {
+        const card = document.createElement('article');
+        card.className = 'review-card';
+        const heading = document.createElement('h3');
+        heading.textContent = entry.name || 'Anonymous Guest';
+        const details = document.createElement('p');
+        const service = entry.mode === 'pantry' ? 'Pantry' : entry.mode === 'both' ? 'Restaurant and pantry' : 'Restaurant';
+        const timestamp = new Date(entry.timestamp).toLocaleString('en-US', { timeZone: 'America/New_York' });
+        details.textContent = service + ' · ' + timestamp + ' · Meals: ' + (entry.meals ?? 0) + ' · Bags: ' + (entry.bags ?? 0);
+        card.append(heading, details);
+        for (const [decision, label] of [['saved', 'I found this entry in the Sheet'], ['missing', 'I checked the Sheet. This entry is missing']]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'review-choice';
+          button.textContent = label;
+          button.disabled = reviewInFlight.has(entry.requestId);
+          button.addEventListener('click', () => resolveReviewedEntry(entry.requestId, decision));
+          card.append(button);
+        }
+        list.append(card);
+      }
+    }
+
+    function openQueueReview() {
+      document.getElementById('reviewMessage').textContent = '';
+      renderQueueReview();
+      document.getElementById('reviewDialog').showModal();
+    }
+
+    async function resolveReviewedEntry(requestId, decision) {
+      if (reviewInFlight.has(requestId)) return;
+      const entry = getQueue().find(item => item.requestId === requestId && item.needsReview);
+      if (!entry || !['saved', 'missing'].includes(decision)) return;
+      const question = decision === 'saved'
+        ? 'I checked the Google Sheet and found this entry. Remove it from the pending list?'
+        : 'I checked the Google Sheet and this entry is missing. Send this entry again?';
+      if (!window.confirm(question)) return;
+      reviewInFlight.add(requestId);
+      renderQueueReview();
+      document.getElementById('reviewMessage').textContent = '';
+      try {
+        if (decision === 'saved') {
+          const response = await fetch(checkinEndpoint(entry), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Checkin-Reconcile': 'saved' },
+            body: JSON.stringify(entry),
+          });
+          if (!response.ok) throw new Error('The saved receipt could not be updated. Keep this entry queued and try again.');
+          saveQueue(getQueue().filter(item => item.requestId !== requestId));
+        } else {
+          const replacement = { ...entry, requestId: crypto.randomUUID() };
+          delete replacement.needsReview;
+          saveQueue(getQueue().map(item => item.requestId === requestId ? replacement : item));
+        }
+        await processQueue();
+      } catch (error) {
+        document.getElementById('reviewMessage').textContent = error.message;
+      } finally {
+        reviewInFlight.delete(requestId);
+        renderQueueReview();
+      }
+    }
+
+    document.getElementById('reviewQueueButton').addEventListener('click', openQueueReview);
+    document.getElementById('closeReviewButton').addEventListener('click', () => document.getElementById('reviewDialog').close());
 
     async function processQueue() {
       if (!navigator.onLine || processing) return;
@@ -1092,11 +1229,27 @@
         let queue = getQueue();
 
         while (queue.length > 0) {
-          const entry = queue[0];
+          let entry = queue.find(item => !item.needsReview);
+          if (!entry) break;
           try {
-            let endpoint = '/api/checkin';
-            if (entry.mode === 'pantry') endpoint = '/api/checkin/pantry';
-            else if (entry.mode === 'both') endpoint = '/api/checkin/both';
+            const endpoint = checkinEndpoint(entry);
+
+            if (!entry.requestId) {
+              // Match the server's receipt for a legacy payload that may already
+              // have been saved before the tablet downloaded this version.
+              const { requestId, needsReview, ...payload } = entry;
+              const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ route: endpoint, body: payload })));
+              const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+              const latest = getQueue();
+              const position = latest.findIndex(item => !item.requestId && JSON.stringify(item) === JSON.stringify(entry));
+              if (position === -1) {
+                queue = latest;
+                continue;
+              }
+              entry = { ...entry, requestId: 'legacy-' + fingerprint };
+              latest[position] = entry;
+              saveQueue(latest);
+            }
 
             const res = await fetch(endpoint, {
               method: 'POST',
@@ -1104,9 +1257,18 @@
               body: JSON.stringify(entry),
             });
             if (res.ok) {
-              queue.shift();
+              // A second entry may have been queued while this save was in flight.
+              queue = getQueue().filter(item => item.requestId !== entry.requestId);
               saveQueue(queue);
             } else {
+              if (res.status === 409) {
+                const result = await res.json();
+                if (result.needsReview === true) {
+                  queue = getQueue().map(item => item.requestId === entry.requestId ? { ...item, needsReview: true } : item);
+                  saveQueue(queue);
+                  continue;
+                }
+              }
               break;
             }
           } catch {
