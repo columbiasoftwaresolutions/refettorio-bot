@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+const { sheets, auth } = require('@googleapis/sheets');
 
 // Tab names
 const TABS = {
@@ -66,7 +66,7 @@ function formatTimestamp(isoOrDate) {
 }
 
 function getAuth(serviceAccount) {
-  return new google.auth.GoogleAuth({
+  return new auth.GoogleAuth({
     credentials: serviceAccount,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
@@ -75,7 +75,7 @@ function getAuth(serviceAccount) {
 async function getSheetsClient(serviceAccount) {
   const auth = getAuth(serviceAccount);
   const authClient = await auth.getClient();
-  return google.sheets({ version: 'v4', auth: authClient });
+  return sheets({ version: 'v4', auth: authClient });
 }
 
 // Get existing sheet tab titles
@@ -247,39 +247,62 @@ async function logRaw(serviceAccount, spreadsheetId, { phoneNumber, rawMessage, 
 }
 
 // Append a restaurant guest check-in row
-async function appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp }) {
-  const sheetsClient = await getSheetsClient(serviceAccount);
+function guestRow({ name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp }) {
   const ts = formatTimestamp(timestamp || new Date());
-  const row = [ts, name || '', zipCode || '', visitType || '', ageRange || '', children || 0, meals ?? 1, firstVisit ? 'Yes' : ''];
+  return [ts, name || '', zipCode || '', visitType || '', ageRange || '', children || 0, meals ?? 1, firstVisit ? 'Yes' : ''];
+}
+
+async function appendGuestLog(serviceAccount, spreadsheetId, entry) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const row = guestRow(entry);
 
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId,
     range: `'${TABS.GUEST_LOG}'!A:H`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
   });
 }
 
 // Append a pantry guest check-in row
-async function appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, children, bags, firstVisit, timestamp }) {
-  const sheetsClient = await getSheetsClient(serviceAccount);
+function pantryRow({ name, zipCode, ageRange, children, bags, firstVisit, timestamp }) {
   const ts = formatTimestamp(timestamp || new Date());
-  const row = [ts, name || '', zipCode || '', ageRange || '', children || 0, bags ?? 1, firstVisit ? 'Yes' : ''];
+  return [ts, name || '', zipCode || '', ageRange || '', children || 0, bags ?? 1, firstVisit ? 'Yes' : ''];
+}
+
+async function appendPantryGuestLog(serviceAccount, spreadsheetId, entry) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const row = pantryRow(entry);
 
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId,
     range: `'${TABS.PANTRY_GUEST_LOG}'!A:G`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
   });
 }
 
 // Append to both Guest Log and Pantry Guest Log (for "Both" mode)
-async function appendBothLogs(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, bags, firstVisit, timestamp }) {
-  await appendGuestLog(serviceAccount, spreadsheetId, { name, zipCode, visitType, ageRange, children, meals, firstVisit, timestamp });
-  await appendPantryGuestLog(serviceAccount, spreadsheetId, { name, zipCode, ageRange, children, bags, firstVisit, timestamp });
+async function appendBothLogs(serviceAccount, spreadsheetId, entry) {
+  const sheetsClient = await getSheetsClient(serviceAccount);
+  const metadata = await sheetsClient.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties' });
+  const sheetIds = new Map(metadata.data.sheets.map(sheet => [sheet.properties.title, sheet.properties.sheetId]));
+  const rows = [[TABS.GUEST_LOG, guestRow(entry)], [TABS.PANTRY_GUEST_LOG, pantryRow(entry)]];
+  const requests = rows.map(([title, row]) => {
+    const sheetId = sheetIds.get(title);
+    if (sheetId === undefined) throw new Error(`Missing Sheet tab: ${title}`);
+    const values = row.map(value => {
+      const userEnteredValue = typeof value === 'number' ? { numberValue: value } : { stringValue: String(value) };
+      return { userEnteredValue };
+    });
+    return {
+      appendCells: { sheetId, rows: [{ values }], fields: 'userEnteredValue' },
+    };
+  });
+  // Sheets applies this batch atomically, so the two logs cannot diverge.
+  await sheetsClient.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
 }
 
 // Get today's guest count from the Guest Log tab

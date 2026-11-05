@@ -27,6 +27,9 @@ app.get('/', (req, res) => {
 
 // Serve the check-in page
 app.get('/checkin', (req, res) => {
+  if (process.env.CLOUDFLARE_WORKER === '1') {
+    return res.type('html').send(app.locals.checkinHtml);
+  }
   res.sendFile(path.join(__dirname, 'checkin.html'));
 });
 
@@ -123,6 +126,8 @@ app.get('/api/checkin/count', async (req, res) => {
 
 // Twilio webhook
 app.post('/webhook', async (req, res) => {
+  if (process.env.CLOUDFLARE_WORKER === '1') return res.sendStatus(404);
+
   const rawMessage = (req.body.Body || '').trim();
   const from = req.body.From || 'unknown';
 
@@ -271,6 +276,9 @@ function escapeXml(str) {
 // Start server
 const PORT = process.env.PORT || 3000;
 
+// Workers cannot perform outbound initialization before an incoming request.
+// The existing production sheet must be provisioned before the hosting switch.
+if (process.env.CLOUDFLARE_WORKER !== '1') {
 ensureAllTabs(config.sheets.serviceAccount, config.sheets.id)
   .then(() => {
     console.log('✅ Sheets tabs verified');
@@ -283,6 +291,7 @@ ensureAllTabs(config.sheets.serviceAccount, config.sheets.id)
     console.error('Check your GOOGLE_SERVICE_ACCOUNT_JSON and GOOGLE_SHEETS_ID.');
     if (!process.env.VERCEL) process.exit(1);
   });
+}
 
 // Export for Vercel serverless
 module.exports = app;
